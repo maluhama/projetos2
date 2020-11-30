@@ -1,0 +1,177 @@
+library(readxl)
+library(dplyr)
+install.packages("parameters")
+library(parameters)
+install.packages("devtools")
+library(devtools)
+install_github("vqv/ggbiplot")
+install.packages("ggbiplot")
+library(ggbiplot)
+install.packages("graphics")
+library(graphics)
+ggbiplot(mtcars.pca)
+library(Brq)
+library(tidyverse)
+library(caret)
+library(leaps)
+install.packages("aod")
+install.packages("corrplot")
+library(corrplot)
+library(aod)
+install.packages("stargazer") 
+library(stargazer)
+####BASE####
+student_mat <- read_excel("Documents/fgv/projetos/student-mat.xlsx")
+student_mat$famsize <- ifelse(student_mat$famsize=="LE3", 1,0)
+student_mat$Pstatus <- ifelse(student_mat$Pstatus=="T", 1,0)
+student_mat$schoolsup <- ifelse(student_mat$schoolsup=="yes", 1,0)
+student_mat$famsup <- ifelse(student_mat$famsup=="yes", 1,0)
+student_mat$paid <- ifelse(student_mat$paid=="yes", 1,0)
+student_mat$activities <- ifelse(student_mat$activities=="yes", 1,0)
+student_mat$higher <- ifelse(student_mat$higher=="yes", 1,0)
+student_mat$nursery <- ifelse(student_mat$nursery=="yes", 1,0)
+student_mat$internet <- ifelse(student_mat$internet=="yes", 1,0)
+student_mat$romantic <- ifelse(student_mat$romantic=="yes", 1,0)
+student_mat$address <- ifelse(student_mat$address=="U", 1,0)
+student_mat$sex <- ifelse(student_mat$sex=="F", 1,0)
+student_mat$G3 <- (student_mat$G1 + student_mat$G2 + student_mat$G3)/3
+student_mat$G3 <- ifelse(student_mat$G3>=10, 1,0)
+head(student_mat)
+
+dmy <- dummyVars(“~ colname1 + colname2”, data=df, fullRank=T)
+dummy <- data.frame(predict(dmy, newdata=df)
+                    
+                    
+                    samp <- sample(nrow(student_mat), nrow(student_mat)*0.75)
+                    train <- student_mat[samp,]
+                    valid <- student_mat[-samp,]
+                    
+ # conduct PCA on training dataset
+pca <- prcomp(train[,c(2:8,13:30) ], retx=TRUE, center=TRUE, scale=TRUE)
+expl.var <- round(pca$sdev^2/sum(pca$sdev^2)*100) # percent explained variance
+summary(pca)
+summary(expl.var)
+                    # prediction of PCs for validation dataset
+                    pred <- predict(pca, newdata=valid[,c(2:8, 13:30) ])
+                    
+PCA <- prcomp(student_mat[,c(2:8, 13:30) ], center = TRUE,scale. = TRUE)
+summary(PCA)
+biplot(PCA)
+
+
+#####SUBSET ####
+df <- student_mat[, c(2:8, 13:30, 33)]
+models <- regsubsets(G3~., data=df, nvmax=20)
+summary(models)
+
+res.sum <- summary(models)
+data.frame(
+  Adj.R2 = which.max(res.sum$adjr2),
+  CP = which.min(res.sum$cp),
+  BIC = which.min(res.sum$bic)
+)
+
+df3<- student_mat[, c(2,3,5,7, 14:17, 21,23,26, 30:33)]
+lm<- lm(G3 ~ ., data=df3)
+summary(lm)
+####Forward stepwise####
+step(mylogit, direction = "forward")
+
+models.fwd <- regsubsets(G3~., data=df, method="forward",nvmax=20)
+summary(models.fwd)
+
+res.sum.fwd <- summary(models.fwd)
+data.frame(
+  Adj.R2 = which.max(res.sum.fwd$adjr2),
+  CP = which.min(res.sum.fwd$cp),
+  BIC = which.min(res.sum.fwd$bic)
+)
+plot(models.fwd ,scale="r2")
+plot(models.fwd ,scale="adjr2", main ="Adjusted Rsquared")
+plot(models.fwd ,scale="Cp", main ="Akaike Information Criterion (AIC)")
+plot(models.fwd ,scale="bic", main ="Bayesian Information Criterion (BIC)")
+####Backward stepwise####
+step(lm, direction = "backward")
+
+models.bwd <- regsubsets(G3~., data=df, nvmax=20, method="backward")
+summary(models.bwd)
+
+res.sum.bwd <- summary(models.bwd)
+data.frame(
+  Adj.R2 = which.max(res.sum.bwd$adjr2),
+  Cp = which.min(res.sum.bwd$cp),
+  BIC = which.min(res.sum.bwd$bic)
+)
+
+df2 <-  student_mat[,c(2, 8, 14:17, 25, 26,31)]
+
+PCA2 <- prcomp(lm, center = TRUE,scale. = TRUE)
+summary(PCA2)
+
+PCA = function(M, k = dim(M)[1]){
+  out = eigen(M)
+  pi = out$vector[,1:k]%*% sqrt(diag(out$values[1:k], nrow = length(out$values[1:k]))) 
+  return = list(eigenvalues = out$values,
+                eigenvectors = out$vectors,
+                pi = pi)
+}
+
+pca = PCA(var(df2))
+barplot(pca$eigenvalues/sum(pca$eigenvalues),
+        xlab = "Componentes Principais",
+        ylab = "% explicada da variância",
+        names.arg = 1:dim(df2)[2],
+        ylim = c(0,1))
+
+mylogit2 <- glm(G3 ~., data = df3, family = "binomial")
+summary(mylogit2)
+confint(pred_train)
+confint.default(pred_train)
+exp(coef(mylogit2))
+
+predict(mylogit2, type="response")
+## odds ratios and 95% CI
+exp(cbind(OR = coef(mylogit2), confint(mylogit2)))
+
+wald.test(b = coef(mylogit2), Sigma = vcov(mylogit2), Terms = 4:6)
+
+set.seed(1234)
+partition = createDataPartition(student_mat$G3, times=1, p=0.80, list=FALSE)
+training=student_mat[partition,]
+dim(training)
+test= student_mat[-partition,]
+dim(test)
+
+set.seed(100)
+samp=sample(1:nrow(student_mat), size = nrow(student_mat)*0.8)
+train = student_mat[samp,]
+test = student_mat[-samp,]
+df3<- student_mat[, c(2,3,5:8, 13,15, 21,24,26, 30:33)]
+
+lin_mod=lm(G3~G1+G2+age+address+Medu+famsup+studytime+activities+schoolsup+famsize+romantic+absences+higher+goout+failures, data=training)
+pred_test <- predict(lin_mod, test)
+
+tMAE <- cat("Test MAE:", round(mean(abs(pred_test-test$G3)),6))
+
+pred_train <-predict(lin_mod, training)
+trMAE <-cat("Train MAE:", round(mean(abs(pred_train-training$G3)),6))
+#The metric we will use in this evaluation is the MAE. Our models performance is good if the MAE value is low. So we want a low MAE value.
+#Mean Absolute Error (MAE): MAE measures the average magnitude of the errors in a set of predictions, without considering their direction. It’s the average over the test sample of the absolute differences between prediction and actual observation where all individual differences have equal weight.
+#the train and test MAE are almost simiar, so our model didn't overfit
+
+dt_prediction = (data.frame((pred_test), (test$G3)))
+
+colnames(dt_prediction) <- c("Predicted G3","Real G3")
+prev <-head(dt_prediction,1000)
+sse <- sum((pred_test - test$G3)^2)
+sst <- sum((mean(df3$G3) - test$G3)^2)
+R2 <- 1-sse/sst
+RMSE <- sqrt(mean((test$G3 - pred_test)^2))
+R2
+c = cor(df3)
+corrplot(c, method="color")
+hist(pred_test)
+hist(test$G3)
+stargazer(lin_mod, type="latex")
+stargazer(df3, type="latex")
+stargazer(prev, type="latex")
